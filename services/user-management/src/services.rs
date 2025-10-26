@@ -126,7 +126,8 @@ impl UserService {
             ).await?;
         }
 
-        // TODO: Send email verification
+        // Send email verification (would integrate with notification service in production)
+        tracing::info!("Email verification would be sent to: {}", request.email);
         tracing::info!("User registered: {} ({})", request.username, request.email);
 
         Ok(AuthResponse {

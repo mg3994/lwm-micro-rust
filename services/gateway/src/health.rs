@@ -42,12 +42,101 @@ pub async fn health_check(
     State(state): State<AppState>,
 ) -> Result<Json<ApiResponse<GatewayHealthResponse>>, (StatusCode, Json<ApiResponse<()>>)> {
     // Get health status of all services
-    let service_health = state.load_balancer.get_all_service_health().await;
+    let service_stats = state.service_registry.get_service_stats().await;
     
     let mut services_status = HashMap::new();
     let mut overall_healthy = true;
 
-    for (service_name, health_status) in service_health {
+    for (service_name, stats) in service_stats {
+        let is_healthy = stats.healthy_instances > 0;
+        if !is_healthy {
+            overall_healthy = false;
+        }
+
+        services_status.insert(service_name.clone(), ServiceHealthStatus {
+            name: service_name,
+            status: if is_healthy { "healthy".to_string() } else { "unhealthy".to_string() },
+            response_time_ms: stats.average_response_time_ms,
+            last_check: chrono::Utc::now(),
+            error_count: 0, // Would track actual errors
+            last_error: None,
+        });
+    }
+
+    let health_response = GatewayHealthResponse {
+        status: if overall_healthy { "healthy".to_string() } else { "degraded".to_string() },
+        timestamp: chrono::Utc::now(),
+        version: "1.0.0".to_string(),
+        services: services_status,
+        gateway_metrics: GatewayMetrics {
+            total_requests: 0, // Would track actual metrics
+            active_connections: 0,
+            average_response_time_ms: 0.0,
+            error_rate_percent: 0.0,
+            uptime_seconds: 0,
+        },
+    };
+
+    if overall_healthy {
+        Ok(Json(ApiResponse::success(health_response)))
+    } else {
+        Err((StatusCode::SERVICE_UNAVAILABLE, Json(ApiResponse::error("Some services are unhealthy".to_string()))))
+    }
+}
+
+// Detailed status endpoint
+pub async fn detailed_status(
+    State(state): State<AppState>,
+) -> Result<Json<ApiResponse<GatewayHealthResponse>>, (StatusCode, Json<ApiResponse<()>>)> {
+    // Same as health_check but with more detailed information
+    health_check(State(state)).await
+}
+
+// Metrics endpoint
+pub async fn metrics(
+    State(state): State<AppState>,
+) -> Result<Json<ApiResponse<GatewayMetrics>>, (StatusCode, Json<ApiResponse<()>>)> {
+    let metrics = GatewayMetrics {
+        total_requests: 0, // Would track actual metrics
+        active_connections: 0,
+        average_response_time_ms: 0.0,
+        error_rate_percent: 0.0,
+        uptime_seconds: 0,
+    };
+
+    Ok(Json(ApiResponse::success(metrics)))
+}
+
+// List all services
+pub async fn list_services(
+    State(state): State<AppState>,
+) -> Result<Json<ApiResponse<HashMap<String, crate::service_registry::ServiceStats>>>, (StatusCode, Json<ApiResponse<()>>)> {
+    let service_stats = state.service_registry.get_service_stats().await;
+    Ok(Json(ApiResponse::success(service_stats)))
+}
+
+// Get health of a specific service
+pub async fn service_health(
+    State(state): State<AppState>,
+    Path(service_name): Path<String>,
+) -> Result<Json<ApiResponse<ServiceHealthStatus>>, (StatusCode, Json<ApiResponse<()>>)> {
+    let service_stats = state.service_registry.get_service_stats().await;
+    
+    if let Some(stats) = service_stats.get(&service_name) {
+        let health_status = ServiceHealthStatus {
+            name: service_name,
+            status: if stats.healthy_instances > 0 { "healthy".to_string() } else { "unhealthy".to_string() },
+            response_time_ms: stats.average_response_time_ms,
+            last_check: chrono::Utc::now(),
+            error_count: 0,
+            last_error: None,
+        };
+        
+        Ok(Json(ApiResponse::success(health_status)))
+    } else {
+        Err((StatusCode::NOT_FOUND, Json(ApiResponse::error("Service not found".to_string()))))
+    }
+}
         let status_str = if health_status.is_healthy { "healthy" } else { "unhealthy" };
         
         if !health_status.is_healthy {

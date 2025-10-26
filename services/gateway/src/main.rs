@@ -10,6 +10,7 @@ mod security;
 mod performance;
 mod monitoring;
 mod service_registry;
+mod routes;
 
 use axum::{
     http::{StatusCode, Method},

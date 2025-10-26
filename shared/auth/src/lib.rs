@@ -4,3 +4,4 @@ pub mod middleware;
 
 pub use jwt::*;
 pub use password::*;
+pub use middleware::*;
