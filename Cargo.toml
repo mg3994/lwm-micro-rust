@@ -1,0 +1,89 @@
+[workspace]
+members = [
+    "services/user-management",
+    "services/chat",
+    "services/video",
+    "services/meetings",
+    "services/payment",
+    "services/notifications",
+    "services/safety-moderation",
+    "services/video-lectures",
+    "services/analytics",
+    "services/gateway",
+    "shared/common",
+    "shared/database",
+    "shared/auth",
+    "tools/db-cli",
+    "tools/redis-cli",
+]
+
+[workspace.dependencies]
+# Core async runtime and web framework
+tokio = { version = "1.0", features = ["full"] }
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+hyper = { version = "1.0", features = ["full"] }
+
+# Serialization and JSON
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database and ORM
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+# Authentication and security
+jsonwebtoken = "9.0"
+bcrypt = "0.15"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Time and date handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Configuration and environment
+config = "0.14"
+dotenvy = "0.15"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Decimal handling for financial calculations
+rust_decimal = { version = "1.0", features = ["serde-json"] }
+
+# WebSocket support
+tokio-tungstenite = "0.21"
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json"] }
+
+# CLI tools
+clap = { version = "4.0", features = ["derive"] }
+url = "2.0"
+
+# Validation
+validator = { version = "0.16", features = ["derive"] }
+
+# Additional dependencies for gateway
+http = "1.0"
+http-body-util = "0.1"
+futures = "0.3"
+async-trait = "0.1"
+base64 = "0.21"
+sha2 = "0.10"
+
+# Additional dependencies for chat service
+dashmap = "5.5"
+tokio-stream = "0.1"
+broadcast = "0.1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

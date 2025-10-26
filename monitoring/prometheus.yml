@@ -1,0 +1,98 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # LinkWithMentor Services
+  - job_name: 'linkwithmentor-gateway'
+    static_configs:
+      - targets: ['gateway:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'linkwithmentor-user-management'
+    static_configs:
+      - targets: ['user-management:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'linkwithmentor-chat'
+    static_configs:
+      - targets: ['chat:8002']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'linkwithmentor-video'
+    static_configs:
+      - targets: ['video:8003']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'linkwithmentor-meetings'
+    static_configs:
+      - targets: ['meetings:8004']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'linkwithmentor-payment'
+    static_configs:
+      - targets: ['payment:8005']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'linkwithmentor-notifications'
+    static_configs:
+      - targets: ['notifications:8006']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'linkwithmentor-safety-moderation'
+    static_configs:
+      - targets: ['safety-moderation:8007']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'linkwithmentor-analytics'
+    static_configs:
+      - targets: ['analytics:8008']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'linkwithmentor-video-lectures'
+    static_configs:
+      - targets: ['video-lectures:8009']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Infrastructure
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 60s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    metrics_path: '/metrics'
+    scrape_interval: 60s
+
+  # Node Exporter (for system metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 60s

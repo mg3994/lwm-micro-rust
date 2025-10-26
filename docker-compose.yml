@@ -1,0 +1,423 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: linkwithmentor-postgres
+    environment:
+      POSTGRES_DB: linkwithmentor
+      POSTGRES_USER: linkwithmentor_user
+      POSTGRES_PASSWORD: linkwithmentor_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - linkwithmentor-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkwithmentor_user -d linkwithmentor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: linkwithmentor-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - linkwithmentor-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+  # TURN/STUN Server for WebRTC
+  coturn:
+    image: coturn/coturn:latest
+    container_name: linkwithmentor-coturn
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "49152-65535:49152-65535/udp"
+    environment:
+      - TURN_USERNAME=linkwithmentor
+      - TURN_PASSWORD=coturn_password
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+
+  # Development services (will be added as we build them)
+  user-management:
+    build:
+      context: .
+      dockerfile: services/user-management/Dockerfile
+    container_name: linkwithmentor-user-management
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgresql://linkwithmentor_user:linkwithmentor_password@postgres:5432/linkwithmentor
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - RUST_LOG=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    profiles:
+      - services
+
+  chat:
+    build:
+      context: .
+      dockerfile: services/chat/Dockerfile
+    container_name: linkwithmentor-chat
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=linkwithmentor_user
+      - DATABASE_PASSWORD=linkwithmentor_password
+      - DATABASE_NAME=linkwithmentor
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - CHAT_HOST=0.0.0.0
+      - CHAT_PORT=8002
+      - RUST_LOG=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    profiles:
+      - services
+
+  video:
+    build:
+      context: .
+      dockerfile: services/video/Dockerfile
+    container_name: linkwithmentor-video
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=linkwithmentor_user
+      - DATABASE_PASSWORD=linkwithmentor_password
+      - DATABASE_NAME=linkwithmentor
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DATABASE=1
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - VIDEO_HOST=0.0.0.0
+      - VIDEO_PORT=8003
+      - TURN_SERVER_URL=turn:coturn:3478
+      - TURN_USERNAME=linkwithmentor
+      - TURN_PASSWORD=coturn_password
+      - TURN_REALM=linkwithmentor.com
+      - VIDEO_RECORDING_ENABLED=true
+      - VIDEO_RECORDING_PATH=/app/recordings
+      - RUST_LOG=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      coturn:
+        condition: service_started
+    networks:
+      - linkwithmentor-network
+    volumes:
+      - video_recordings:/app/recordings
+    profiles:
+      - services
+
+  meetings:
+    build:
+      context: .
+      dockerfile: services/meetings/Dockerfile
+    container_name: linkwithmentor-meetings
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=linkwithmentor_user
+      - DATABASE_PASSWORD=linkwithmentor_password
+      - DATABASE_NAME=linkwithmentor
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DATABASE=2
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - MEETINGS_HOST=0.0.0.0
+      - MEETINGS_PORT=8004
+      - MATERIALS_STORAGE_PATH=/app/materials
+      - WHITEBOARD_STORAGE_PATH=/app/whiteboards
+      - RUST_LOG=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    volumes:
+      - meeting_materials:/app/materials
+      - whiteboard_data:/app/whiteboards
+    profiles:
+      - services
+
+  payment:
+    build:
+      context: .
+      dockerfile: services/payment/Dockerfile
+    container_name: linkwithmentor-payment
+    ports:
+      - "8005:8005"
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=linkwithmentor_user
+      - DATABASE_PASSWORD=linkwithmentor_password
+      - DATABASE_NAME=linkwithmentor
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DATABASE=3
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - PAYMENT_HOST=0.0.0.0
+      - PAYMENT_PORT=8005
+      - PLATFORM_FEE_PERCENTAGE=10.0
+      - ENCRYPTION_KEY=payment-encryption-key-32-chars-long
+      - PAYMENT_SANDBOX=true
+      - STRIPE_ENABLED=true
+      - STRIPE_SECRET_KEY=sk_test_stripe_key
+      - PAYPAL_ENABLED=true
+      - RAZORPAY_ENABLED=true
+      - UPI_ENABLED=true
+      - RUST_LOG=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    profiles:
+      - services
+
+  safety-moderation:
+    build:
+      context: .
+      dockerfile: services/safety-moderation/Dockerfile
+    container_name: linkwithmentor-safety-moderation
+    ports:
+      - "8007:8007"
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=linkwithmentor_user
+      - DATABASE_PASSWORD=linkwithmentor_password
+      - DATABASE_NAME=linkwithmentor
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DATABASE=4
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - SAFETY_HOST=0.0.0.0
+      - SAFETY_PORT=8007
+      - SAFETY_REAL_TIME_ANALYSIS=true
+      - SAFETY_AUTO_MODERATION=true
+      - ML_MODEL_CACHE_DIR=/app/models
+      - RUST_LOG=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    volumes:
+      - ml_models:/app/models
+    profiles:
+      - services
+
+  notifications:
+    build:
+      context: .
+      dockerfile: services/notifications/Dockerfile
+    container_name: linkwithmentor-notifications
+    ports:
+      - "8006:8006"
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=linkwithmentor_user
+      - DATABASE_PASSWORD=linkwithmentor_password
+      - DATABASE_NAME=linkwithmentor
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DATABASE=5
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - NOTIFICATIONS_HOST=0.0.0.0
+      - NOTIFICATIONS_PORT=8006
+      - EMAIL_ENABLED=true
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=noreply@linkwithmentor.com
+      - SMTP_PASSWORD=smtp_password
+      - FROM_EMAIL=noreply@linkwithmentor.com
+      - FROM_NAME=LinkWithMentor
+      - SMS_ENABLED=true
+      - PUSH_ENABLED=true
+      - RUST_LOG=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    profiles:
+      - services
+
+  analytics:
+    build:
+      context: .
+      dockerfile: services/analytics/Dockerfile
+    container_name: linkwithmentor-analytics
+    ports:
+      - "8008:8008"
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=linkwithmentor_user
+      - DATABASE_PASSWORD=linkwithmentor_password
+      - DATABASE_NAME=linkwithmentor
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DATABASE=6
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - ANALYTICS_HOST=0.0.0.0
+      - ANALYTICS_PORT=8008
+      - ANALYTICS_DATA_RETENTION_DAYS=365
+      - ANALYTICS_REAL_TIME=true
+      - RUST_LOG=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    profiles:
+      - services
+
+  video-lectures:
+    build:
+      context: .
+      dockerfile: services/video-lectures/Dockerfile
+    container_name: linkwithmentor-video-lectures
+    ports:
+      - "8009:8009"
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=linkwithmentor_user
+      - DATABASE_PASSWORD=linkwithmentor_password
+      - DATABASE_NAME=linkwithmentor
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DATABASE=7
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - VIDEO_LECTURES_HOST=0.0.0.0
+      - VIDEO_LECTURES_PORT=8009
+      - UPLOAD_PATH=/app/uploads
+      - PROCESSED_PATH=/app/processed
+      - THUMBNAIL_PATH=/app/thumbnails
+      - MAX_UPLOAD_SIZE=2147483648
+      - FFMPEG_PATH=/usr/bin/ffmpeg
+      - RUST_LOG=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    volumes:
+      - video_uploads:/app/uploads
+      - video_processed:/app/processed
+      - video_thumbnails:/app/thumbnails
+    profiles:
+      - services
+
+  gateway:
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
+    container_name: linkwithmentor-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - USER_MANAGEMENT_URL=http://user-management:8000
+      - CHAT_SERVICE_URL=http://chat:8002
+      - VIDEO_SERVICE_URL=http://video:8003
+      - MEETINGS_SERVICE_URL=http://meetings:8004
+      - PAYMENT_SERVICE_URL=http://payment:8005
+      - NOTIFICATIONS_SERVICE_URL=http://notifications:8006
+      - SAFETY_SERVICE_URL=http://safety-moderation:8007
+      - ANALYTICS_SERVICE_URL=http://analytics:8008
+      - VIDEO_LECTURES_SERVICE_URL=http://video-lectures:8009
+      - RUST_LOG=debug
+    depends_on:
+      - user-management
+      - chat
+      - video
+      - meetings
+      - payment
+      - notifications
+      - safety-moderation
+      - analytics
+      - video-lectures
+    networks:
+      - linkwithmentor-network
+    profiles:
+      - services
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  video_recordings:
+    driver: local
+  meeting_materials:
+    driver: local
+  whiteboard_data:
+    driver: local
+  ml_models:
+    driver: local
+  video_uploads:
+    driver: local
+  video_processed:
+    driver: local
+  video_thumbnails:
+    driver: local
+
+networks:
+  linkwithmentor-network:
+    driver: bridge

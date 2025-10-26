@@ -1,0 +1,63 @@
+[package]
+name = "linkwithmentor-notifications"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "notifications"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+linkwithmentor-common = { path = "../../shared/common" }
+linkwithmentor-database = { path = "../../shared/database" }
+linkwithmentor-auth = { path = "../../shared/auth" }
+
+# Core async and web framework
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Database and Redis
+sqlx = { workspace = true }
+redis = { workspace = true }
+
+# Authentication and security
+jsonwebtoken = { workspace = true }
+uuid = { workspace = true }
+
+# Time and configuration
+chrono = { workspace = true }
+config = { workspace = true }
+dotenvy = { workspace = true }
+
+# Logging and error handling
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# HTTP client for external APIs
+reqwest = { workspace = true }
+
+# Additional dependencies for notification service
+lettre = "0.11" # Email sending
+tokio-cron-scheduler = "0.9" # Job scheduling
+handlebars = "4.5" # Template engine
+base64 = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+
+# Push notification dependencies
+fcm = "0.9" # Firebase Cloud Messaging
+web-push = "0.9" # Web Push Protocol
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockito = "1.2"

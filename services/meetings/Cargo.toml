@@ -1,0 +1,58 @@
+[package]
+name = "linkwithmentor-meetings"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "meetings"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+linkwithmentor-common = { path = "../../shared/common" }
+linkwithmentor-database = { path = "../../shared/database" }
+linkwithmentor-auth = { path = "../../shared/auth" }
+
+# Core async and web framework
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Database and Redis
+sqlx = { workspace = true }
+redis = { workspace = true }
+
+# Authentication and security
+jsonwebtoken = { workspace = true }
+uuid = { workspace = true }
+
+# Time and configuration
+chrono = { workspace = true }
+config = { workspace = true }
+dotenvy = { workspace = true }
+
+# Logging and error handling
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# WebSocket support for real-time collaboration
+tokio-tungstenite = { workspace = true }
+futures = { workspace = true }
+dashmap = { workspace = true }
+
+# Additional dependencies for meetings service
+cron = "0.12"
+icalendar = "0.16"
+lettre = "0.11"
+tokio-cron-scheduler = "0.10"
+
+[dev-dependencies]
+tokio-test = "0.4"

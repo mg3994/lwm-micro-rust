@@ -1,0 +1,20 @@
+[package]
+name = "linkwithmentor-db-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "db-cli"
+path = "src/main.rs"
+
+[dependencies]
+linkwithmentor-common = { path = "../../shared/common" }
+linkwithmentor-database = { path = "../../shared/database" }
+linkwithmentor-auth = { path = "../../shared/auth" }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+clap = { version = "4.0", features = ["derive"] }
+dotenvy = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }

@@ -1,0 +1,71 @@
+[package]
+name = "linkwithmentor-video-lectures"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "video-lectures"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+linkwithmentor-common = { path = "../../shared/common" }
+linkwithmentor-database = { path = "../../shared/database" }
+linkwithmentor-auth = { path = "../../shared/auth" }
+
+# Core async and web framework
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Database and Redis
+sqlx = { workspace = true }
+redis = { workspace = true }
+
+# Authentication and security
+jsonwebtoken = { workspace = true }
+uuid = { workspace = true }
+
+# Time and configuration
+chrono = { workspace = true }
+config = { workspace = true }
+dotenvy = { workspace = true }
+
+# Logging and error handling
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# HTTP client for external services
+reqwest = { workspace = true }
+
+# Additional dependencies for video service
+tokio-util = { version = "0.7", features = ["io"] }
+futures-util = "0.3"
+bytes = "1.0"
+mime = "0.3"
+mime_guess = "2.0"
+
+# Video processing (FFmpeg bindings)
+ffmpeg-next = "6.0"
+
+# AWS SDK for S3 storage
+aws-config = "1.0"
+aws-sdk-s3 = "1.0"
+
+# Job queue for video processing
+tokio-cron-scheduler = "0.9"
+
+# Image processing for thumbnails
+image = "0.24"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.0"

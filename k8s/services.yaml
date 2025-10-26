@@ -1,0 +1,583 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-management
+  namespace: linkwithmentor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user-management
+  template:
+    metadata:
+      labels:
+        app: user-management
+    spec:
+      containers:
+      - name: user-management
+        image: linkwithmentor/user-management:latest
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: linkwithmentor-config
+        - secretRef:
+            name: linkwithmentor-secrets
+        env:
+        - name: USER_MANAGEMENT_PORT
+          value: "8000"
+        - name: REDIS_DATABASE
+          value: "0"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-management-service
+  namespace: linkwithmentor
+spec:
+  selector:
+    app: user-management
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat
+  namespace: linkwithmentor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: chat
+  template:
+    metadata:
+      labels:
+        app: chat
+    spec:
+      containers:
+      - name: chat
+        image: linkwithmentor/chat:latest
+        ports:
+        - containerPort: 8002
+        envFrom:
+        - configMapRef:
+            name: linkwithmentor-config
+        - secretRef:
+            name: linkwithmentor-secrets
+        env:
+        - name: CHAT_PORT
+          value: "8002"
+        - name: REDIS_DATABASE
+          value: "1"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-service
+  namespace: linkwithmentor
+spec:
+  selector:
+    app: chat
+  ports:
+  - port: 8002
+    targetPort: 8002
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: video
+  namespace: linkwithmentor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: video
+  template:
+    metadata:
+      labels:
+        app: video
+    spec:
+      containers:
+      - name: video
+        image: linkwithmentor/video:latest
+        ports:
+        - containerPort: 8003
+        envFrom:
+        - configMapRef:
+            name: linkwithmentor-config
+        - secretRef:
+            name: linkwithmentor-secrets
+        env:
+        - name: VIDEO_PORT
+          value: "8003"
+        - name: REDIS_DATABASE
+          value: "2"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: video-service
+  namespace: linkwithmentor
+spec:
+  selector:
+    app: video
+  ports:
+  - port: 8003
+    targetPort: 8003
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meetings
+  namespace: linkwithmentor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: meetings
+  template:
+    metadata:
+      labels:
+        app: meetings
+    spec:
+      containers:
+      - name: meetings
+        image: linkwithmentor/meetings:latest
+        ports:
+        - containerPort: 8004
+        envFrom:
+        - configMapRef:
+            name: linkwithmentor-config
+        - secretRef:
+            name: linkwithmentor-secrets
+        env:
+        - name: MEETINGS_PORT
+          value: "8004"
+        - name: REDIS_DATABASE
+          value: "3"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8004
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: meetings-service
+  namespace: linkwithmentor
+spec:
+  selector:
+    app: meetings
+  ports:
+  - port: 8004
+    targetPort: 8004
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+  namespace: linkwithmentor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+    spec:
+      containers:
+      - name: payment
+        image: linkwithmentor/payment:latest
+        ports:
+        - containerPort: 8005
+        envFrom:
+        - configMapRef:
+            name: linkwithmentor-config
+        - secretRef:
+            name: linkwithmentor-secrets
+        env:
+        - name: PAYMENT_PORT
+          value: "8005"
+        - name: REDIS_DATABASE
+          value: "4"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8005
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8005
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: linkwithmentor
+spec:
+  selector:
+    app: payment
+  ports:
+  - port: 8005
+    targetPort: 8005
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications
+  namespace: linkwithmentor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notifications
+  template:
+    metadata:
+      labels:
+        app: notifications
+    spec:
+      containers:
+      - name: notifications
+        image: linkwithmentor/notifications:latest
+        ports:
+        - containerPort: 8006
+        envFrom:
+        - configMapRef:
+            name: linkwithmentor-config
+        - secretRef:
+            name: linkwithmentor-secrets
+        env:
+        - name: NOTIFICATIONS_PORT
+          value: "8006"
+        - name: REDIS_DATABASE
+          value: "5"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8006
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8006
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notifications-service
+  namespace: linkwithmentor
+spec:
+  selector:
+    app: notifications
+  ports:
+  - port: 8006
+    targetPort: 8006
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: safety-moderation
+  namespace: linkwithmentor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: safety-moderation
+  template:
+    metadata:
+      labels:
+        app: safety-moderation
+    spec:
+      containers:
+      - name: safety-moderation
+        image: linkwithmentor/safety-moderation:latest
+        ports:
+        - containerPort: 8007
+        envFrom:
+        - configMapRef:
+            name: linkwithmentor-config
+        - secretRef:
+            name: linkwithmentor-secrets
+        env:
+        - name: SAFETY_PORT
+          value: "8007"
+        - name: REDIS_DATABASE
+          value: "6"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8007
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8007
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: safety-moderation-service
+  namespace: linkwithmentor
+spec:
+  selector:
+    app: safety-moderation
+  ports:
+  - port: 8007
+    targetPort: 8007
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics
+  namespace: linkwithmentor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics
+  template:
+    metadata:
+      labels:
+        app: analytics
+    spec:
+      containers:
+      - name: analytics
+        image: linkwithmentor/analytics:latest
+        ports:
+        - containerPort: 8008
+        envFrom:
+        - configMapRef:
+            name: linkwithmentor-config
+        - secretRef:
+            name: linkwithmentor-secrets
+        env:
+        - name: ANALYTICS_PORT
+          value: "8008"
+        - name: REDIS_DATABASE
+          value: "7"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8008
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8008
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: linkwithmentor
+spec:
+  selector:
+    app: analytics
+  ports:
+  - port: 8008
+    targetPort: 8008
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: video-lectures
+  namespace: linkwithmentor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: video-lectures
+  template:
+    metadata:
+      labels:
+        app: video-lectures
+    spec:
+      containers:
+      - name: video-lectures
+        image: linkwithmentor/video-lectures:latest
+        ports:
+        - containerPort: 8009
+        envFrom:
+        - configMapRef:
+            name: linkwithmentor-config
+        - secretRef:
+            name: linkwithmentor-secrets
+        env:
+        - name: VIDEO_LECTURES_PORT
+          value: "8009"
+        - name: REDIS_DATABASE
+          value: "8"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1000m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8009
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8009
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: video-lectures-service
+  namespace: linkwithmentor
+spec:
+  selector:
+    app: video-lectures
+  ports:
+  - port: 8009
+    targetPort: 8009
+  type: ClusterIP

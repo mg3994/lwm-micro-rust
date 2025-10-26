@@ -1,0 +1,58 @@
+[package]
+name = "linkwithmentor-user-management"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "user-management"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+linkwithmentor-common = { path = "../../shared/common" }
+linkwithmentor-database = { path = "../../shared/database" }
+linkwithmentor-auth = { path = "../../shared/auth" }
+
+# Core async and web framework
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+redis = { workspace = true }
+
+# Authentication and security
+jsonwebtoken = { workspace = true }
+bcrypt = { workspace = true }
+uuid = { workspace = true }
+
+# Time and configuration
+chrono = { workspace = true }
+config = { workspace = true }
+dotenvy = { workspace = true }
+
+# Logging and error handling
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Decimal for financial calculations
+rust_decimal = { workspace = true }
+
+# HTTP client for OAuth
+reqwest = { workspace = true }
+
+# Email validation
+validator = { version = "0.16", features = ["derive"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+axum-test = "14.0"

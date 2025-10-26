@@ -1,0 +1,68 @@
+[package]
+name = "linkwithmentor-payment"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "payment"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+linkwithmentor-common = { path = "../../shared/common" }
+linkwithmentor-database = { path = "../../shared/database" }
+linkwithmentor-auth = { path = "../../shared/auth" }
+
+# Core async and web framework
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Database and Redis
+sqlx = { workspace = true }
+redis = { workspace = true }
+
+# Authentication and security
+jsonwebtoken = { workspace = true }
+uuid = { workspace = true }
+
+# Time and configuration
+chrono = { workspace = true }
+config = { workspace = true }
+dotenvy = { workspace = true }
+
+# Logging and error handling
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Financial calculations
+rust_decimal = { workspace = true }
+
+# HTTP client for payment gateways
+reqwest = { workspace = true }
+
+# Additional dependencies for payment service
+base64 = { workspace = true }
+sha2 = { workspace = true }
+hmac = "0.12"
+hex = "0.4"
+async-trait = { workspace = true }
+
+# Encryption for sensitive data
+aes-gcm = "0.10"
+rand = "0.8"
+
+# Job scheduling for recurring payments
+tokio-cron-scheduler = "0.9"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockito = "1.2"

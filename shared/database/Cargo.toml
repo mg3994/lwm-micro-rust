@@ -1,0 +1,19 @@
+[package]
+name = "linkwithmentor-database"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+linkwithmentor-common = { path = "../common" }
+linkwithmentor-auth = { path = "../auth" }
+sqlx = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rust_decimal = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"

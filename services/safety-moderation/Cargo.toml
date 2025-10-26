@@ -1,0 +1,68 @@
+[package]
+name = "linkwithmentor-safety-moderation"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "safety-moderation"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+linkwithmentor-common = { path = "../../shared/common" }
+linkwithmentor-database = { path = "../../shared/database" }
+linkwithmentor-auth = { path = "../../shared/auth" }
+
+# Core async and web framework
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Database and Redis
+sqlx = { workspace = true }
+redis = { workspace = true }
+
+# Authentication and security
+jsonwebtoken = { workspace = true }
+uuid = { workspace = true }
+
+# Time and configuration
+chrono = { workspace = true }
+config = { workspace = true }
+dotenvy = { workspace = true }
+
+# Logging and error handling
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# HTTP client for external APIs
+reqwest = { workspace = true }
+
+# Additional dependencies for safety and moderation
+regex = "1.10"
+base64 = { workspace = true }
+sha2 = { workspace = true }
+async-trait = { workspace = true }
+
+# Text analysis and ML
+rust-bert = "0.21"
+candle-core = "0.3"
+tokenizers = "0.14"
+
+# Image processing
+image = "0.24"
+imageproc = "0.23"
+
+# Job scheduling for batch processing
+tokio-cron-scheduler = "0.9"
+
+[dev-dependencies]
+tokio-test = "0.4"

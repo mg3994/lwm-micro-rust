@@ -1,0 +1,634 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: linkwithmentor-postgres-prod
+    environment:
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_USER=${DATABASE_USERNAME}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./shared/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: linkwithmentor-redis-prod
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # User Management Service
+  user-management:
+    build:
+      context: .
+      dockerfile: services/user-management/Dockerfile
+    container_name: linkwithmentor-user-management-prod
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=0
+      - JWT_SECRET=${JWT_SECRET}
+      - USER_MANAGEMENT_HOST=0.0.0.0
+      - USER_MANAGEMENT_PORT=8000
+      - RUST_LOG=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Chat Service
+  chat:
+    build:
+      context: .
+      dockerfile: services/chat/Dockerfile
+    container_name: linkwithmentor-chat-prod
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=1
+      - JWT_SECRET=${JWT_SECRET}
+      - CHAT_HOST=0.0.0.0
+      - CHAT_PORT=8002
+      - RUST_LOG=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Video Service
+  video:
+    build:
+      context: .
+      dockerfile: services/video/Dockerfile
+    container_name: linkwithmentor-video-prod
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=2
+      - JWT_SECRET=${JWT_SECRET}
+      - VIDEO_HOST=0.0.0.0
+      - VIDEO_PORT=8003
+      - TURN_SERVER_URL=${TURN_SERVER_URL}
+      - TURN_USERNAME=${TURN_USERNAME}
+      - TURN_PASSWORD=${TURN_PASSWORD}
+      - RUST_LOG=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    volumes:
+      - video_recordings:/app/recordings
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Meetings Service
+  meetings:
+    build:
+      context: .
+      dockerfile: services/meetings/Dockerfile
+    container_name: linkwithmentor-meetings-prod
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=3
+      - JWT_SECRET=${JWT_SECRET}
+      - MEETINGS_HOST=0.0.0.0
+      - MEETINGS_PORT=8004
+      - MATERIALS_STORAGE_PATH=/app/materials
+      - WHITEBOARD_STORAGE_PATH=/app/whiteboards
+      - RUST_LOG=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    volumes:
+      - meeting_materials:/app/materials
+      - whiteboard_data:/app/whiteboards
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Payment Service
+  payment:
+    build:
+      context: .
+      dockerfile: services/payment/Dockerfile
+    container_name: linkwithmentor-payment-prod
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=4
+      - JWT_SECRET=${JWT_SECRET}
+      - PAYMENT_HOST=0.0.0.0
+      - PAYMENT_PORT=8005
+      - PLATFORM_FEE_PERCENTAGE=${PLATFORM_FEE_PERCENTAGE}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - PAYMENT_SANDBOX=false
+      - STRIPE_ENABLED=true
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - PAYPAL_ENABLED=true
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
+      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
+      - RAZORPAY_ENABLED=true
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - UPI_ENABLED=true
+      - RUST_LOG=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Notifications Service
+  notifications:
+    build:
+      context: .
+      dockerfile: services/notifications/Dockerfile
+    container_name: linkwithmentor-notifications-prod
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=5
+      - JWT_SECRET=${JWT_SECRET}
+      - NOTIFICATIONS_HOST=0.0.0.0
+      - NOTIFICATIONS_PORT=8006
+      - EMAIL_ENABLED=true
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - FROM_EMAIL=${FROM_EMAIL}
+      - FROM_NAME=${FROM_NAME}
+      - SMS_ENABLED=true
+      - SMS_API_KEY=${SMS_API_KEY}
+      - SMS_API_SECRET=${SMS_API_SECRET}
+      - PUSH_ENABLED=true
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY}
+      - RUST_LOG=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Safety & Moderation Service
+  safety-moderation:
+    build:
+      context: .
+      dockerfile: services/safety-moderation/Dockerfile
+    container_name: linkwithmentor-safety-moderation-prod
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=6
+      - JWT_SECRET=${JWT_SECRET}
+      - SAFETY_HOST=0.0.0.0
+      - SAFETY_PORT=8007
+      - SAFETY_REAL_TIME_ANALYSIS=true
+      - SAFETY_AUTO_MODERATION=true
+      - ML_MODEL_CACHE_DIR=/app/models
+      - PERSPECTIVE_API_KEY=${PERSPECTIVE_API_KEY}
+      - RUST_LOG=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    volumes:
+      - ml_models:/app/models
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Analytics Service
+  analytics:
+    build:
+      context: .
+      dockerfile: services/analytics/Dockerfile
+    container_name: linkwithmentor-analytics-prod
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=7
+      - JWT_SECRET=${JWT_SECRET}
+      - ANALYTICS_HOST=0.0.0.0
+      - ANALYTICS_PORT=8008
+      - ANALYTICS_DATA_RETENTION_DAYS=365
+      - ANALYTICS_REAL_TIME=true
+      - RUST_LOG=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Video Lectures Service
+  video-lectures:
+    build:
+      context: .
+      dockerfile: services/video-lectures/Dockerfile
+    container_name: linkwithmentor-video-lectures-prod
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=8
+      - JWT_SECRET=${JWT_SECRET}
+      - VIDEO_LECTURES_HOST=0.0.0.0
+      - VIDEO_LECTURES_PORT=8009
+      - UPLOAD_PATH=/app/uploads
+      - PROCESSED_PATH=/app/processed
+      - THUMBNAIL_PATH=/app/thumbnails
+      - MAX_UPLOAD_SIZE=2147483648
+      - FFMPEG_PATH=/usr/bin/ffmpeg
+      - CDN_BASE_URL=${CDN_BASE_URL}
+      - RUST_LOG=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkwithmentor-network
+    volumes:
+      - video_uploads:/app/uploads
+      - video_processed:/app/processed
+      - video_thumbnails:/app/thumbnails
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8009/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+
+  # API Gateway
+  gateway:
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
+    container_name: linkwithmentor-gateway-prod
+    ports:
+      - "80:8080"
+      - "443:8443"
+    environment:
+      - USER_MANAGEMENT_URL=http://user-management:8000
+      - CHAT_SERVICE_URL=http://chat:8002
+      - VIDEO_SERVICE_URL=http://video:8003
+      - MEETINGS_SERVICE_URL=http://meetings:8004
+      - PAYMENT_SERVICE_URL=http://payment:8005
+      - NOTIFICATIONS_SERVICE_URL=http://notifications:8006
+      - SAFETY_SERVICE_URL=http://safety-moderation:8007
+      - ANALYTICS_SERVICE_URL=http://analytics:8008
+      - VIDEO_LECTURES_SERVICE_URL=http://video-lectures:8009
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - REQUIRE_HTTPS=true
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - RATE_LIMIT_RPM=1000
+      - RUST_LOG=info
+    depends_on:
+      - user-management
+      - chat
+      - video
+      - meetings
+      - payment
+      - notifications
+      - safety-moderation
+      - analytics
+      - video-lectures
+      - redis
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: linkwithmentor-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: linkwithmentor-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+
+  # Log aggregation - Loki
+  loki:
+    image: grafana/loki:latest
+    container_name: linkwithmentor-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - linkwithmentor-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  video_recordings:
+    driver: local
+  meeting_materials:
+    driver: local
+  whiteboard_data:
+    driver: local
+  ml_models:
+    driver: local
+  video_uploads:
+    driver: local
+  video_processed:
+    driver: local
+  video_thumbnails:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+
+networks:
+  linkwithmentor-network:
+    driver: bridge

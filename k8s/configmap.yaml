@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linkwithmentor-config
+  namespace: linkwithmentor
+data:
+  # Database Configuration
+  DATABASE_HOST: "postgres-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "linkwithmentor"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  
+  # Service URLs
+  USER_MANAGEMENT_URL: "http://user-management-service:8000"
+  CHAT_SERVICE_URL: "http://chat-service:8002"
+  VIDEO_SERVICE_URL: "http://video-service:8003"
+  MEETINGS_SERVICE_URL: "http://meetings-service:8004"
+  PAYMENT_SERVICE_URL: "http://payment-service:8005"
+  NOTIFICATIONS_SERVICE_URL: "http://notifications-service:8006"
+  SAFETY_SERVICE_URL: "http://safety-moderation-service:8007"
+  ANALYTICS_SERVICE_URL: "http://analytics-service:8008"
+  VIDEO_LECTURES_SERVICE_URL: "http://video-lectures-service:8009"
+  
+  # Application Configuration
+  RUST_LOG: "info"
+  PLATFORM_FEE_PERCENTAGE: "10.0"
+  PAYMENT_SANDBOX: "false"
+  ANALYTICS_DATA_RETENTION_DAYS: "365"
+  ANALYTICS_REAL_TIME: "true"
+  SAFETY_REAL_TIME_ANALYSIS: "true"
+  SAFETY_AUTO_MODERATION: "true"
+  
+  # Email Configuration
+  SMTP_HOST: "smtp.gmail.com"
+  SMTP_PORT: "587"
+  FROM_NAME: "LinkWithMentor"
+  
+  # Feature Flags
+  EMAIL_ENABLED: "true"
+  SMS_ENABLED: "true"
+  PUSH_ENABLED: "true"
+  STRIPE_ENABLED: "true"
+  PAYPAL_ENABLED: "true"
+  RAZORPAY_ENABLED: "true"
+  UPI_ENABLED: "true"
